@@ -21,7 +21,7 @@ const BridalAccessories = () => {
   const [wishlist, setWishlist] = useState(new Set());
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { addToCart } = useCart();
-  const [filteredProducts, setFilteredProducts] = useState(products);
+
 
   const [activeFilters, setActiveFilters] = useState({
     color: false,
@@ -164,6 +164,7 @@ const BridalAccessories = () => {
     }
   ];
 
+  const [filteredProducts, setFilteredProducts] = useState(products);
   const toggleWishlist = (e, productId) => {
     e.stopPropagation();
     e.preventDefault();

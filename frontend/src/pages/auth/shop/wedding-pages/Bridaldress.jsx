@@ -126,7 +126,8 @@ const BridalDress = () => {
 
   return (
     <div className="bg-white text-gray-900 min-h-screen">
-       <Navbar onCartClick={() => setIsCartOpen(true)}  allProducts={allProductsArray} />
+       <Navbar onCartClick={() => setIsCartOpen(true)} />
+       {/* <Navbar onCartClick={() => setIsCartOpen(true)}  allProducts={allProductsArray} /> */}
 
       {/* Hero section */}
       <section className="relative">

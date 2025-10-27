@@ -212,7 +212,8 @@ const BridalShoes = () => {
   return (
     <div className="bg-white text-gray-900 font-sans  min-h-screen">
       {/* Top green nav */}
-      <Navbar onCartClick={() => setIsCartOpen(true)}  allProducts={allProductsArray} />
+      <Navbar onCartClick={() => setIsCartOpen(true)}  />
+      {/* <Navbar onCartClick={() => setIsCartOpen(true)}  allProducts={allProductsArray} /> */}
 
       {/* Hero image with text overlay */}
       <section className="relative mx-auto">
