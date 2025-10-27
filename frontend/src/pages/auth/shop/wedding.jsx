@@ -1,14 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, User, ShoppingCart, Scissors, ChevronDown, ArrowRight } from 'lucide-react';
 import Navbar from './Navbar';
 import MarketFooter from './marketlayout/MarketFooter';
+import CartModal from './CartModal';
+import { useCart } from '../../../contexts/CartContext';
 
 const Wedding = () => {
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState(0);
+  const { 
+    cartItems, 
+    addToCart, 
+    updateQuantity, 
+    removeItem, 
+    cartCount 
+  } = useCart();
+  
   const [activeNavItem, setActiveNavItem] = useState('Shop');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState({
     category: '',
     price: '',
@@ -26,15 +36,15 @@ const Wedding = () => {
     { id: 'contact', label: 'Contact', href: '#' }
   ];
 
-  // Mapping object to convert category titles to route paths
+  // Enhanced mapping with all wedding categories
   const categoryRoutes = {
-    'Bridal dresses': '/bridaldress',
-    'Bouquets & floral props': '/bridalshoes', // You may need to add this route
-    'Bridal shoes': '/bridalshoes',
-    'Bridal sets & accessories': '/bridalaccessories',
+    'Bridal dresses': '/bridal-dress',
+    'Bouquets & floral props': '/bridal-accessories',
+    'Bridal shoes': '/bridal-shoes',
+    'Bridal sets & accessories': '/bridal-accessories',
     'Groom wear & tuxedos': '/groomsmen',
-    'Bridal shower props': '/groomsmen', // You may need to add this route
-    'Honeymoon package': '/groomsmen' // You may need to add this route
+    'Bridal shower props': '/bridal-accessories',
+    'Honeymoon package': '/bridal-accessories'
   };
 
   const categories = [
@@ -42,43 +52,50 @@ const Wedding = () => {
       id: 1,
       title: 'Bridal dresses',
       image: 'https://res.cloudinary.com/drgk8rmny/image/upload/v1756446721/image_14_u9coq8.png',
-      description: 'Elegant bridal gowns for your special day'
+      description: 'Elegant bridal gowns for your special day',
+      route: '/bridal-dress'
     },
     {
       id: 2,
       title: 'Bouquets & floral props',
       image: 'https://res.cloudinary.com/drgk8rmny/image/upload/v1756446813/image_32_upiq4i.png',
-      description: 'Beautiful bouquets and floral arrangements'
+      description: 'Beautiful bouquets and floral arrangements',
+      route: '/bridal-accessories'
     },
     {
       id: 3,
       title: 'Bridal shoes',
       image: 'https://res.cloudinary.com/drgk8rmny/image/upload/v1756446724/image_33_x3l7vp.png',
-      description: 'Comfortable and stylish wedding footwear'
+      description: 'Comfortable and stylish wedding footwear',
+      route: '/bridal-shoes'
     },
     {
       id: 4,
       title: 'Bridal sets & accessories',
       image: 'https://res.cloudinary.com/drgk8rmny/image/upload/v1756446721/image_34_u6vaw9.png',
-      description: 'Complete bridal accessory collections'
+      description: 'Complete bridal accessory collections',
+      route: '/bridal-accessories'
     },
     {
       id: 5,
       title: 'Groom wear & tuxedos',
       image: 'https://res.cloudinary.com/drgk8rmny/image/upload/v1756446721/image_30_buh1fj.png',
-      description: 'Sophisticated menswear for grooms'
+      description: 'Sophisticated menswear for grooms',
+      route: '/groomsmen'
     },
     {
       id: 6,
       title: 'Bridal shower props',
       image: 'https://res.cloudinary.com/drgk8rmny/image/upload/v1756446722/image_35_ffbrn5.png',
-      description: 'Fun props for bridal shower celebrations'
+      description: 'Fun props for bridal shower celebrations',
+      route: '/bridal-accessories'
     },
     {
       id: 7,
       title: 'Honeymoon package',
       image: 'https://res.cloudinary.com/drgk8rmny/image/upload/v1756446722/image_36_typ1gy.png',
-      description: 'Romantic getaway packages for newlyweds'
+      description: 'Romantic getaway packages for newlyweds',
+      route: '/bridal-accessories'
     }
   ];
 
@@ -106,18 +123,38 @@ const Wedding = () => {
     }
   };
 
-  // Updated handleCategoryClick function with navigation
+  const handleAddToCart = (product) => {
+    const cartProduct = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      type: product.type,
+      description: product.description,
+    };
+    addToCart(cartProduct);
+    setIsCartOpen(true);
+  };
+
+  const handleCheckout = () => {
+    navigate('/checkout', { state: { cartItems } });
+  };
+
+  // Updated handleCategoryClick function with enhanced navigation
   const handleCategoryClick = (category) => {
     console.log(`Viewing category: ${category.title}`);
     
-    // Get the route path from the mapping
-    const routePath = categoryRoutes[category.title];
-    
-    if (routePath) {
-      navigate(routePath);
+    // Use the route from category object first, then fallback to mapping
+    if (category.route) {
+      navigate(category.route);
     } else {
-      console.warn(`No route found for category: ${category.title}`);
-      // Optionally, you could show a message to the user or navigate to a default page
+      // Fallback to mapping
+      const routePath = categoryRoutes[category.title];
+      if (routePath) {
+        navigate(routePath);
+      } else {
+        console.warn(`No route found for category: ${category.title}`);
+      }
     }
   };
 
@@ -175,7 +212,7 @@ const Wedding = () => {
   return (
     <div className="bg-white text-gray-900 min-h-screen font-sans">
       {/* Top Green Navigation Bar */}
-       <Navbar />
+       <Navbar cartItems={cartCount} onCartClick={() => setIsCartOpen(true)} />
 
       {/* Hero Section */}
       <section className="mx-auto relative">
@@ -253,6 +290,16 @@ const Wedding = () => {
           ))}
         </div>
       </section>
+
+      {/* Cart Modal */}
+      <CartModal 
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cartItems}
+        updateQuantity={updateQuantity}
+        removeItem={removeItem}
+        onCheckout={handleCheckout}
+      />
 
       {/* Footer */}
         <footer className="max-w-[100rem] mx-auto flex flex-col md:flex-row items-center justify-between gap-6 pb-10 pt-10">

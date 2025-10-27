@@ -1,0 +1,245 @@
+<?php
+// ==========================================
+// UPDATED LARAVEL CONTROLLER - COMBINED NAME ONLY
+// ==========================================
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\EmailService;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\URL;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+
+class RegisteredUserController extends Controller
+{
+    protected $emailService;
+
+    public function __construct(EmailService $emailService)
+    {
+        $this->emailService = $emailService;
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        try {
+            // Log incoming request for debugging
+            \Log::info('Registration request received', [
+                'email' => $request->email,
+                'name' => $request->name,
+                'has_password' => !empty($request->password),
+                'has_confirmation' => !empty($request->password_confirmation),
+            ]);
+
+            // Validate the incoming request with detailed rules
+            $validator = Validator::make($request->all(), [
+                'name' => ['required', 'string', 'min:2', 'max:255'],
+                'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+                'password' => [
+                    'required', 
+                    'string', 
+                    'min:8',
+                    'regex:/^(?=.*[!@#$%^&*(),.?":{}|<>]).*$/' // Must contain special character
+                ],
+                'password_confirmation' => ['required', 'string', 'same:password'],
+            ], [
+                // Custom error messages
+                'name.required' => 'Full name is required.',
+                'name.min' => 'Name must be at least 2 characters.',
+                'email.required' => 'Email address is required.',
+                'email.email' => 'Please enter a valid email address.',
+                'email.unique' => 'An account with this email already exists.',
+                'password.required' => 'Password is required.',
+                'password.min' => 'Password must be at least 8 characters.',
+                'password.regex' => 'Password must contain at least one special character.',
+                'password_confirmation.required' => 'Password confirmation is required.',
+                'password_confirmation.same' => 'Password confirmation does not match.',
+            ]);
+
+            if ($validator->fails()) {
+                \Log::warning('Registration validation failed', [
+                    'errors' => $validator->errors()->toArray(),
+                    'email' => $request->email
+                ]);
+
+                return response()->json([
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                    'details' => $validator->errors()->first(), // First error message
+                ], 422);
+            }
+
+            // Use database transaction for safety
+            DB::beginTransaction();
+
+            try {
+                // Check if user already exists (double-check within transaction)
+                $existingUser = User::where('email', strtolower($request->email))->first();
+                if ($existingUser) {
+                    \Log::info('User already exists', ['email' => $request->email]);
+                    
+                    DB::rollBack();
+                    
+                    if ($existingUser->hasVerifiedEmail()) {
+                        return response()->json([
+                            'message' => 'You already have an account with this email. Please log in instead.',
+                        ], 409);
+                    } else {
+                        // Resend verification email
+                        $this->sendVerificationEmail($existingUser);
+                        
+                        return response()->json([
+                            'message' => 'You have already registered but haven\'t verified your email. We\'ve sent you a new verification link.',
+                        ], 409);
+                    }
+                }
+
+                // Create the new user with combined name only
+                $user = User::create([
+                    'name' => trim($request->name), // Only store combined name
+                    'email' => strtolower(trim($request->email)),
+                    'password' => Hash::make($request->password),
+                ]);
+
+                \Log::info('New user created successfully', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'name' => $user->name, // Combined name
+                ]);
+
+                // Generate authentication token
+                $token = $user->createToken('auth-token')->plainTextToken;
+
+                // Send email verification
+                $this->sendVerificationEmail($user);
+
+                // Send welcome email (queued)
+                $this->queueWelcomeEmail($user);
+
+                // Fire the registered event
+                event(new Registered($user));
+
+                // Commit transaction
+                DB::commit();
+
+                return response()->json([
+                    'message' => 'Registration successful! Please check your email to verify your account.',
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name, // Combined name
+                        'email' => $user->email,
+                        'email_verified_at' => $user->email_verified_at,
+                        'created_at' => $user->created_at,
+                        'updated_at' => $user->updated_at,
+                    ],
+                    'token' => $token,
+                    'requires_verification' => true,
+                ], 201);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('Database error during registration', [
+                'error' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'email' => $request->email ?? 'unknown'
+            ]);
+
+            // Check for unique constraint violation
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'message' => 'An account with this email already exists.',
+                    'errors' => ['email' => ['This email is already registered.']]
+                ], 409);
+            }
+
+            return response()->json([
+                'message' => 'Registration failed due to database error. Please try again.',
+            ], 500);
+
+        } catch (\PDOException $e) {
+            \Log::error('Database PDO connection error', [
+                'error' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'email' => $request->email ?? 'unknown'
+            ]);
+
+            return response()->json([
+                'message' => 'Database connection failed. Please try again later.',
+            ], 500);
+
+        } catch (\Exception $e) {
+            \Log::error('Registration error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'email' => $request->email ?? 'unknown'
+            ]);
+
+            return response()->json([
+                'message' => 'Registration failed. Please try again.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
+            ], 500);
+        }
+    }
+
+    /**
+     * Send email verification to user
+     */
+    private function sendVerificationEmail(User $user)
+    {
+        try {
+            $verificationUrl = URL::temporarySignedRoute(
+                'verification.verify',
+                Carbon::now()->addMinutes(60),
+                [
+                    'id' => $user->id,
+                    'hash' => sha1($user->getEmailForVerification())
+                ]
+            );
+
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            $frontendVerificationUrl = $frontendUrl . '/email-verification?verify_url=' . urlencode($verificationUrl);
+
+            // Queue verification email
+            dispatch(function() use ($user, $frontendVerificationUrl) {
+                $this->emailService->sendEmailVerification($user, $frontendVerificationUrl);
+            })->onQueue('emails');
+
+            \Log::info('Verification email queued', ['user_id' => $user->id]);
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to queue verification email', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Queue welcome email
+     */
+    private function queueWelcomeEmail(User $user)
+    {
+        try {
+            dispatch(function() use ($user) {
+                $this->emailService->sendWelcomeEmail($user);
+            })->onQueue('emails');
+
+            \Log::info('Welcome email queued', ['user_id' => $user->id]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to queue welcome email', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+}

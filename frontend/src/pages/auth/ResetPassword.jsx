@@ -59,17 +59,10 @@ export default function SkyisSetPassword() {
   return (
     <div className="bg-white min-h-screen flex items-center justify-center p-6 font-sans">
       <main className="min-h-screen w-dvw flex flex-col md:flex-row items-center justify-center md:justify-between max-w-7xl mx-auto px-6 py-12 gap-12 md:gap-24">
-        {/* Left Image Section */}
-        <div className="hidden flex-1 sm:flex flex-shrink-0 w-full md:max-w-lg lg:max-w-2xl rounded-3xl overflow-hidden relative">
-            <img
-                src="https://res.cloudinary.com/drgk8rmny/image/upload/v1756222176/Frame_1686553286_qxegrh.png"
-                alt="Person holding a green umbrella with a black bag hanging on their shoulder, standing near a black metal fence"
-                className="w-full h-auto object-cover rounded-3xl"
-            />
-        </div>
+       
 
         {/* Right Form Section */}
-        <section className="md:flex-1 flex flex-col items-center justify-center px-6 md:px-0 mt-10 md:mt-0">
+        <section className="md:flex-1 m-auto flex flex-col items-center justify-center px-6 md:px-0">
           <div className="flex flex-col items-center space-y-4 max-w-md w-full">
             {/* Key Icon */}
             <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">

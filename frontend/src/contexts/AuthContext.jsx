@@ -1,121 +1,240 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import api from '../axios';
+
+
+// contexts/AuthContext.jsx - FINAL WORKING VERSION
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authService } from '../pages/auth/services/authService';
+import { googleAuthService } from '../pages/auth/services/googleAuthService';
 
 const AuthContext = createContext();
 
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
 export const AuthProvider = ({ children }) => {
-    // Initialize user state from localStorage if available
-    const [user, setUser] = useState(() => {
-        const storedUser = localStorage.getItem('user');
-        return storedUser ? JSON.parse(storedUser) : null;
-    });
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-    // Initialize token state from localStorage if available
-    const [token, setToken] = useState(localStorage.getItem('token') || null);
+  useEffect(() => {
+    initializeAuth();
+    
+    // Set up Google Auth callback
+    if (typeof googleAuthService?.setAuthCallback === 'function') {
+      googleAuthService.setAuthCallback(handleGoogleAuthSuccess);
+    }
+  }, []);
 
-    // Update localStorage whenever user or token changes
-    useEffect(() => {
-        if (user) {
-            localStorage.setItem('user', JSON.stringify(user));
+  const initializeAuth = async () => {
+    try {
+      console.log('🔐 Initializing authentication...');
+      
+      const token = localStorage.getItem('auth_token');
+      const storedUserData = localStorage.getItem('user_data');
+      
+      console.log('📦 Token exists:', !!token);
+      console.log('📦 User data exists:', !!storedUserData);
+      
+      if (token && storedUserData) {
+        try {
+          const storedUser = JSON.parse(storedUserData);
+          console.log('✅ Found stored user:', storedUser.email);
+          
+          // Set user and auth state IMMEDIATELY - no server validation
+          setUser(storedUser);
+          setIsAuthenticated(true);
+          
+          console.log('✅ User authenticated from localStorage');
+          
+        } catch (parseError) {
+          console.error('❌ Error parsing user data:', parseError);
+          clearAuth();
+        }
+      } else {
+        console.log('🔍 No auth data found in localStorage');
+        clearAuth();
+      }
+    } catch (error) {
+      console.error('💥 Auth initialization error:', error);
+      clearAuth();
+    } finally {
+      setLoading(false);
+      setIsInitialized(true);
+      console.log('🏁 Auth initialization complete - isAuthenticated:', isAuthenticated);
+    }
+  };
+
+  const clearAuth = () => {
+    console.log('🧹 Clearing auth data');
+    setUser(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('isLoggedIn');
+  };
+
+  const handleGoogleAuthSuccess = async (authData) => {
+    try {
+      console.log('🔐 Processing Google auth success');
+      
+      if (authData.token && authData.user) {
+        // Store in localStorage
+        localStorage.setItem('auth_token', authData.token);
+        localStorage.setItem('user_data', JSON.stringify(authData.user));
+        localStorage.setItem('userEmail', authData.user.email);
+        localStorage.setItem('userName', authData.user.name || '');
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        // Update state
+        setUser(authData.user);
+        setIsAuthenticated(true);
+        setIsInitialized(true);
+        setLoading(false);
+        
+        console.log('✅ Google auth state updated successfully');
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('❌ Error processing Google auth:', error);
+      return false;
+    }
+  };
+
+  const login = async (credentials) => {
+    try {
+      setLoading(true);
+      console.log('🔐 Attempting login...');
+      
+      const data = await authService.login(credentials);
+      
+      if (data.token && data.user) {
+        console.log('✅ Login API successful:', data.user.email);
+        
+        // Store in localStorage FIRST
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+        localStorage.setItem('userEmail', data.user.email);
+        localStorage.setItem('userName', data.user.name || '');
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        console.log('✅ Auth data saved to localStorage');
+        
+        // THEN update state
+        setUser(data.user);
+        setIsAuthenticated(true);
+        setIsInitialized(true);
+        
+        console.log('✅ Auth state updated - isAuthenticated:', true);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Login failed:', error);
+      clearAuth();
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      setLoading(true);
+      console.log('📝 Attempting registration...');
+      
+      const response = await authService.register(userData);
+      
+      if (response.user && response.token) {
+        console.log('✅ Registration successful:', response.user.email);
+        
+        // Store in localStorage
+        localStorage.setItem('auth_token', response.token);
+        localStorage.setItem('user_data', JSON.stringify(response.user));
+        localStorage.setItem('userEmail', response.user.email);
+        localStorage.setItem('userName', response.user.name || '');
+      // Don't set as authenticated until email is verified
+      setUser(response.user);
+      setIsAuthenticated(false);
+      setIsInitialized(true);
+        
+        setUser(response.user);
+        
+        // Only set authenticated if email is verified
+        if (response.user.email_verified_at) {
+          setIsAuthenticated(true);
+          localStorage.setItem('isLoggedIn', 'true');
         } else {
-            localStorage.removeItem('user');
+          setIsAuthenticated(false);
         }
-    }, [user]);
+        
+        setIsInitialized(true);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Registration failed:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    useEffect(() => {
-        if (token) {
-            localStorage.setItem('token', token);
-        } else {
-            localStorage.removeItem('token');
-        }
-    }, [token]);
-
-    // Set the token in localStorage and axios headers
-    const setAuthToken = (token) => {
-        setToken(token);
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    };
-
-    // Clear the token and user from localStorage and axios headers
-    const clearAuthToken = () => {
-        setToken(null);
-        setUser(null);
-        delete api.defaults.headers.common['Authorization'];
-    };
-
-    const login = async (credentials) => {
+  const logout = async () => {
+    try {
+      setLoading(true);
+      console.log('🚪 Logging out...');
+      
+      // Call backend logout if available
+      if (typeof authService.logout === 'function') {
         try {
-            
-            await api.get('/sanctum/csrf-cookie');
-            const response = await api.post('/login', credentials);
-            setUser(response.data.user);
-            setAuthToken(response.data.token);
-            
+          await authService.logout();
         } catch (error) {
-            console.error('Login failed:', error);
-            throw error;
+          console.warn('⚠️ Backend logout failed:', error);
         }
-    };
+      }
+      
+      console.log('✅ Logout successful');
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+    } finally {
+      clearAuth();
+      setLoading(false);
+    }
+  };
 
-    const register = async (userData) => {
-        try {
-            
-            await api.get('/sanctum/csrf-cookie');
-            const response = await api.post('/register', userData);
-            if (response && response.data) {
-                setUser(response.data.user);
-                setAuthToken(response.data.token);
-                return response; // Return the response for handling in the component
-            } else {
-                throw new Error('Invalid response from server');
-            }
-        } catch (error) {
-            console.error('Registration failed:', error);
-            throw error;
-        }
-    };
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user_data', JSON.stringify(updatedUser));
+  };
 
-    const logout = async () => {
-        try {
-            await api.post('/logout');
-            clearAuthToken();
-        } catch (error) {
-            console.error('Logout failed:', error);
-            throw error;
-        }
-    };
+  const value = {
+    user,
+    loading,
+    isAuthenticated,
+    isInitialized,
+    login,
+    register,
+    updateUser,
+    logout,
+    checkAuthStatus: initializeAuth,
+    handleGoogleAuthSuccess,
+  };
 
-    const forgotPassword = async (email) => {
-        try {
-            await api.get('/sanctum/csrf-cookie');
-            await api.post('/forgot-password', { email });
-        } catch (error) {
-            console.error('Forgot password failed:', error);
-            throw error;
-        }
-    };
+  console.log('🔄 AuthContext render - isAuthenticated:', isAuthenticated, 'loading:', loading);
 
-    const resetPassword = async (data) => {
-        try {
-            await api.get('/sanctum/csrf-cookie');
-            const response = await api.post('/reset-password', data);
-            return response.data;
-        } catch (error) {
-            console.error('Reset password failed:', error);
-            throw error;
-        }
-    };
-
-    return (
-        <AuthContext.Provider value={{ user, token, login, register, logout, forgotPassword, resetPassword }}>
-            {children}
-        </AuthContext.Provider>
-    );
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
-
-AuthProvider.propTypes = {
-    children: PropTypes.node.isRequired,
-};
-
-export const useAuth = () => useContext(AuthContext);

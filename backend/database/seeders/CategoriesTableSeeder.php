@@ -20,7 +20,7 @@ class CategoriesTableSeeder extends Seeder
         ];
 
         foreach ($mainCategories as $category) {
-           Category::factory()->firstOrCreate([
+           Category::firstOrCreate([
                 'name' => $category,
                 'slug' => Str::slug($category),
             ]);

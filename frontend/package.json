@@ -13,14 +13,19 @@
     "@fortawesome/fontawesome-free": "^6.7.2",
     "@tailwindcss/vite": "^4.1.8",
     "axios": "^1.9.0",
-    "framer-motion": "^12.23.12",
+    "framer-motion": "^12.23.24",
+    "iconsax-reactjs": "^0.0.8",
     "lucide-react": "^0.525.0",
+    "paystack-js": "^0.18.1",
     "prop-types": "^15.8.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-helmet": "^6.1.0",
     "react-router-dom": "^7.6.2",
-    "tailwindcss": "^4.1.8"
+    "remixicon": "^4.6.0",
+    "sweetalert2": "^11.26.2",
+    "tailwindcss": "^4.1.8",
+    "vuesax": "^3.12.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

@@ -22,9 +22,20 @@ import FAQSection from '../navigation/faq';
 import ContactUsSection from '../navigation/Contact';
 import LandingFooter from '../navigation/LandingFooter';
 import HeroSection from '../navigation/HeroSection';
+import Navbar from '../../pages/auth/shop/Navbar';
+import { Menu } from 'iconsax-reactjs';
+import Blog from '../navigation/Blog';
+import CartModal from '../../pages/auth/shop/CartModal';
+import { Link, useNavigate } from 'react-router-dom';
+import { useCart } from '../../contexts/CartContext'; // ✅ Import useCart
+
 
 const Home = () =>  {
   const [openFAQ, setOpenFAQ] = useState(null);
+  const navigate = useNavigate();
+  const [cartItems, setCartItems] = useState([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const { addToCart } = useCart(); // ✅ Get addToCart from context
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -40,6 +51,45 @@ const Home = () =>  {
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  // const addToCart = (product) => {
+  //   const existingItem = cartItems.find(item => item.id === product.id);
+  //   if (existingItem) {
+  //     updateQuantity(product.id, 1);
+  //   } else {
+  //     setCartItems([...cartItems, { ...product, quantity: 1 }]);
+  //   }
+  //   setIsCartOpen(true);
+  // };
+
+  
+  const handleCartClick = () => {
+    setIsCartOpen(true);
+  };
+
+  const handleAddToCart = (product) => {
+    addToCart(product); // ✅ Use context method
+    setIsCartOpen(true); // Open cart modal
+  };
+
+
+  const updateQuantity = (itemId, change) => {
+    setCartItems(cartItems.map(item => {
+      if (item.id === itemId) {
+        const newQuantity = item.quantity + change;
+        return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
+      }
+      return item;
+    }).filter(item => item.quantity > 0));
+  };
+
+  const removeItem = (itemId) => {
+    setCartItems(cartItems.filter(item => item.id !== itemId));
+  };
+
+  const handleCheckout = () => {
+    navigate('/checkout', { state: { cartItems } });
   };
 
   const handleSubmit = (e) => {
@@ -120,27 +170,11 @@ const Home = () =>  {
 
   return (
     <div className="bg-white text-black font-family-sans">
-      {/* Header */}
-      <header className="bg-[#0f3a3a] text-white text-xs sm:text-sm font-semibold">
-        <nav className=" mx-auto flex items-center justify-between px-4 py-2">
-          {/* Scrolling Text */}
-          <div className="relative flex-1 overflow-hidden">
-            <ul className="flex space-x-12 animate-marquee whitespace-nowrap">
-              {Array(200)
-                .fill("NEW ARRIVALS")
-                .map((item, i) => (
-                  <li key={i} className="cursor-pointer">
-                    {item}
-                  </li>
-                ))}
-            </ul>
-          </div>
-        </nav>
-      </header>
-
+       <Navbar onCartClick={handleCartClick}  /> 
+      
       {/* Hero Image */}
       <section>
-        <HeroSection />
+        <HeroSection addToCart={addToCart} />
       </section>
       <div className="sm:w-full mt-20">
             <p className="text-base font-normal sm:text-sm w-full text-center leading-relaxed font-lg text-gray-600 max-w-full">
@@ -188,6 +222,10 @@ const Home = () =>  {
       <section className="max-w-[1553px] mx-auto px-4 sm:px-6 py-12">
         <TestimonialsSection />
       </section>
+      {/* Trusted By Experts */}
+      <section className="max-w-[1553px] mx-auto px-4 sm:px-6 py-12">
+        <Blog />
+      </section>
 
       {/* FAQ */}
       <section className="max-w-[1553px] mx-auto px-4 sm:px-6 py-12">
@@ -203,13 +241,12 @@ const Home = () =>  {
       <footer className="max-w-[1553px] mx-auto px-4 sm:px-6 py-12 flex flex-col sm:flex-row items-center justify-between space-y-6 sm:space-y-0">
         <LandingFooter />
       </footer>
-      {/* Footer */}
-      <div
-        className="max-w-[1553px] mx-auto px-4 relative bottom-6 left-6 sm:text-lg text-xs text-gray-500"
-        style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.04rem' }}
-      >
-        Copyright © Skyis 2025
-      </div>
+
+        <CartModal 
+          isOpen={isCartOpen} 
+          onClose={() => setIsCartOpen(false)}
+        />
+      
     </div>
   );
 };

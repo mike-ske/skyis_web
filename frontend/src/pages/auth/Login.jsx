@@ -1,226 +1,284 @@
-import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+
+import React, { useState, useEffect } from "react";
+import { Mail, Lock } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function SkyisLogin() {
+import Button from './components/Button';
+import ImageCarousel from './components/ImageCarousel';
+import { validateEmail, validatePassword } from './utils/validation';
+import Input from './components/Input';
+import { googleAuthService } from './services/googleAuthService';
+import { useAuth } from '../../contexts/AuthContext';
+
+const setupCSRF = async () => {
+  try {
+    const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+    const csrfUrl = `${apiUrl}/sanctum/csrf-cookie`;
+    
+    await fetch(csrfUrl, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    console.log('✅ CSRF token setup complete');
+  } catch (error) {
+    console.warn('⚠️ CSRF setup failed:', error);
+  }
+};
+
+const SkyisLogin = ({ onNavigate }) => {
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [googleReady, setGoogleReady] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login, loading: authLoading } = useAuth();
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  useEffect(() => {
+    setupCSRF();
+  }, []);
 
-    // Clear error as user types
-    setErrors((prev) => ({
-      ...prev,
-      [name]: "",
-    }));
+  useEffect(() => {
+    const initGoogleAuth = async () => {
+      try {
+        await googleAuthService.initialize();
+        setGoogleReady(true);
+        
+        setTimeout(() => {
+          const rendered = googleAuthService.renderButton('googleButton');
+          if (!rendered) {
+            console.warn('Failed to render Google button');
+          }
+        }, 100);
+      } catch (error) {
+        console.error('Google Auth initialization failed:', error);
+        setGoogleReady(false);
+        setErrors(prev => ({ 
+          ...prev, 
+          google: 'Google Sign-In is currently unavailable. Please use email login.' 
+        }));
+      }
+    };
+  
+    initGoogleAuth();
+  }, []);
+
+  const handleChange = (field) => (e) => {
+    setFormData({ ...formData, [field]: e.target.value });
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: '' });
+    }
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const newErrors = {};
+    
+    newErrors.email = validateEmail(formData.email);
+    newErrors.password = validatePassword(formData.password);
+
+    setErrors(newErrors);
+    return !Object.values(newErrors).some(error => error !== '');
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) return;
+    if (isSubmitting) return; // Prevent double submission
 
-    const defaultEmail = "micahalumona@gmail.com";
-    const defaultPassword = "Alumona@124";
+    setIsSubmitting(true);
+    setErrors(prev => ({ ...prev, general: '' }));
 
-    let newErrors = {};
+    try {
+      const loginData = {
+        email: formData.email.toLowerCase().trim(),
+        password: formData.password
+      };
 
-    if (!formData.email) {
-      newErrors.email = "Email is required";
+      console.log('🔐 Submitting login...');
+
+      // Call login from AuthContext - this updates state
+      await login(loginData);
+      
+      console.log('✅ Login successful, state updated');
+      
+      // Small delay to ensure state propagates
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Navigate using React Router
+      const from = location.state?.from?.pathname || '/';
+      
+      console.log('🚀 Navigating to:', from);
+      navigate(from, { replace: true });
+      
+    } catch (error) {
+      console.error('❌ Login error:', error);
+      
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setErrors({ general: errorMessage });
+      setIsSubmitting(false);
     }
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    }
-
-    if (
-      formData.email &&
-      formData.password &&
-      (formData.email !== defaultEmail || formData.password !== defaultPassword)
-    ) {
-      newErrors.email = "Invalid email or password";
-      newErrors.password = "Invalid email or password";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    // ✅ Successful login
-    setErrors({});
-    navigate("/dashboard");
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
+  const isLoading = isSubmitting || authLoading;
 
   return (
-    <div className="bg-white min-h-screen flex items-center justify-center p-6 font-sans">
-      <main className="min-h-screen w-dvw flex flex-col md:flex-row items-center justify-center md:justify-between max-w-7xl mx-auto px-6 py-12 gap-12 md:gap-24">
-        {/* Left Image Section */}
-        <div className="hidden flex-1 sm:flex flex-shrink-0 w-full md:max-w-lg lg:max-w-2xl rounded-3xl overflow-hidden relative">
-          <img
-            src="https://res.cloudinary.com/drgk8rmny/image/upload/v1756222176/Frame_1686553286_qxegrh.png"
-            alt="Login illustration"
-            className="w-full h-auto object-cover rounded-3xl"
-          />
-        </div>
+    <div className="h-screen flex overflow-hidden">
+      <div className="hidden w-auto lg:flex relative">
+        <ImageCarousel />
+      </div>
 
-        {/* Right Login Form Section */}
-        <section className="flex-1 max-w-md w-full">
-          <div className="flex justify-end mb-6">
-            <Link
-              className="text-[#0B3B38] text-sm font-normal hover:underline"
+      <motion.div 
+        className="w-full lg:w-[150%] flex items-center justify-center p-4 sm:p-6 bg-white overflow-y-auto"
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="w-full max-w-md space-y-4 sm:space-y-6 md:space-y-8 py-4">
+          <div className="flex justify-end mb-4 sm:mb-6">
+            <Link 
+              className="text-[#0B3B38] text-sm font-normal hover:underline" 
               to="/register"
             >
-              Sign up
+              Sign Up
             </Link>
           </div>
-
-          <div className="flex flex-col items-center mb-6 space-y-2">
-            
-            <div className="hidden flex-1 sm:flex justify-center items-center flex-shrink-0 w-full md:max-w-lg lg:max-w-2xl rounded-3xl overflow-hidden relative">
-              <Link to="/">
-                <img
-                  src="https://res.cloudinary.com/drgk8rmny/image/upload/v1753051987/Frame_1000011702_5_2_iucm5i.svg"
-                  alt="Skyis Logo"
-                  className="w-full h-auto object-cover rounded-3xl cursor-pointer hover:opacity-90 transition-opacity"
-                />
-              </Link>
-            </div>
-            <h1 className="text-2xl font-semibold text-[#0B3B38]">
-              Welcome back
-            </h1>
-            <p className="text-sm text-gray-600 text-center px-4">
-              Log in and reconnect with fashion's most creative ecosystem.
-            </p>
+          
+          <div className="hidden sm:flex justify-center items-center w-full rounded-3xl overflow-hidden mb-4 sm:mb-6">
+            <Link to="/">
+              <img
+                src="https://res.cloudinary.com/drgk8rmny/image/upload/v1753051987/Frame_1000011702_5_2_iucm5i.svg"
+                alt="Skyis Logo"
+                className="w-full max-w-xs h-auto object-cover rounded-3xl cursor-pointer hover:opacity-90 transition-opacity"
+              />
+            </Link>
           </div>
+          
+          <motion.div 
+            className="text-center"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back</h2>
+            <p className="mt-2 text-sm sm:text-base text-gray-600">Log in and reconnect with fashion's most creative ecosystem.</p>
+          </motion.div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Field */}
-            <div>
-              <label
-                className="block mb-1 text-sm font-normal text-gray-900"
-                htmlFor="email"
-              >
-                Email Address
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                  <Mail className="w-4 h-4" />
-                </span>
-                <input
-                  className={`w-full border rounded-xl py-2.5 pl-10 pr-4 text-gray-500 placeholder-gray-400 focus:outline-none transition-all duration-300 ${
-                    errors.email
-                      ? "border-red-500 focus:ring-1 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-1 focus:ring-[#0B3B38] focus:border-[#0B3B38]"
-                  }`}
-                  id="email"
-                  name="email"
-                  placeholder="johndoe@example.com"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                />
+          <div className="space-y-4 sm:space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div id="googleButton" className="flex justify-center">
+                {/* Google button will be rendered here */}
               </div>
+              {errors.google && (
+                <p className="mt-2 text-sm text-amber-600 text-center">{errors.google}</p>
+              )}
+            </motion.div>
+
+            <motion.div 
+              className="relative"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">OR</span>
+              </div>
+            </motion.div>
+
+            <motion.form 
+              className="space-y-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              onSubmit={handleSubmit}
+            >
+              <Input
+                type="email"
+                label="Email Address"
+                placeholder="johndoe@example.com"
+                value={formData.email}
+                onChange={handleChange('email')}
+                icon={Mail}
+                error={errors.email}
+                required
+                disabled={isLoading}
+              />
+              
+              <Input
+                type="password"
+                label="Password"
+                placeholder="••••••••••••"
+                value={formData.password}
+                onChange={handleChange('password')}
+                icon={Lock}
+                error={errors.password}
+                required
+                disabled={isLoading}
+              />
+
               <AnimatePresence>
-                {errors.email && (
-                  <motion.p
-                    className="text-red-500 text-sm mt-1"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    transition={{ duration: 0.3 }}
+                {errors.general && (
+                  <motion.div 
+                    className="flex items-center gap-1 text-sm text-red-600 bg-red-50 p-3 rounded-lg"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
                   >
-                    {errors.email}
-                  </motion.p>
+                    <span>⚠️</span>
+                    {errors.general}
+                  </motion.div>
                 )}
               </AnimatePresence>
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <label
-                className="block mb-1 text-sm font-normal text-gray-900"
-                htmlFor="password"
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
               >
-                Password
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                  <Lock className="w-4 h-4" />
-                </span>
-                <input
-                  className={`w-full border rounded-xl py-2.5 pl-10 pr-10 text-gray-500 placeholder-gray-400 focus:outline-none transition-all duration-300 ${
-                    errors.password
-                      ? "border-red-500 focus:ring-1 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-1 focus:ring-[#0B3B38] focus:border-[#0B3B38]"
-                  }`}
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Enter your password"
-                />
-                <span
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 cursor-pointer hover:text-gray-600"
-                  onClick={togglePasswordVisibility}
+                <Button
+                  type="submit"
+                  loading={isLoading}
+                  className="mt-4 sm:mt-6 w-full"
+                  disabled={!formData.email || !formData.password || isLoading}
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </span>
-              </div>
-              <AnimatePresence>
-                {errors.password && (
-                  <motion.p
-                    className="text-red-500 text-sm mt-1"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {errors.password}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Login Button */}
-            <button
-              className="w-full bg-[#0B3B38] text-white rounded-xl py-3 font-normal text-base hover:bg-[#0a2f2d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              type="submit"
-              disabled={!formData.email || !formData.password}
+                  {isLoading ? 'Signing in...' : 'Login'}
+                </Button>
+              </motion.div>
+            </motion.form>
+            
+            <motion.div 
+              className="flex text-center hover:underline justify-end pb-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
             >
-              Login
-            </button>
-          </form>
-
-          {/* Forgot Password Link */}
-          <div className="mt-3 text-right">
-            <Link
-              className="text-[#0B3B38] text-sm font-normal hover:underline"
-              to="/forgot-password"
-            >
-              Forgot password
-            </Link>
+              <Link to="forgot-password" className="text-sm text-emerald-900 hover:text-emerald-700 ">
+                Forgot password
+              </Link>
+            </motion.div>
           </div>
-        </section>
-      </main>
+        </div>
+      </motion.div>
     </div>
   );
-}
+};
+
+export default SkyisLogin;

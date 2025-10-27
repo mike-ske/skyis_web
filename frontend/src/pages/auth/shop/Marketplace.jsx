@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
-import { Search, User, ShoppingCart, ChevronDown, Heart, ArrowRight, Star } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, Heart, ArrowRight, Star } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import MarketFooter from './marketlayout/MarketFooter';
+import CartModal from './CartModal';
+import { useCart } from '../../../contexts/CartContext';
 
 const Marketplace = () => {
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState(0);
+  const [cartItems, setCartItems] = useState([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [wishlist, setWishlist] = useState(new Set());
+  const { addToCart } = useCart();
   const [activeFilters, setActiveFilters] = useState({
     category: '',
     price: '',
@@ -163,7 +167,7 @@ const Marketplace = () => {
     ]
   };
 
-  // Category routing mapping
+
   const categoryRoutes = {
     weddings: '/wedding',
     luxury: '/luxury',
@@ -184,8 +188,36 @@ const Marketplace = () => {
     });
   };
 
-  const addToCart = () => {
-    setCartItems(prev => prev + 1);
+  // const addToCart = (product) => {
+  //   const existingItem = cartItems.find(item => item.id === product.id);
+  //   if (existingItem) {
+  //     updateQuantity(product.id, 1);
+  //   } else {
+  //     setCartItems([...cartItems, { ...product, quantity: 1 }]);
+  //   }
+  //   setIsCartOpen(true);
+  // };
+   const handleAddToCart = (product) => {
+    addToCart(product);
+    setIsCartOpen(true);
+  };
+
+  const updateQuantity = (itemId, change) => {
+    setCartItems(cartItems.map(item => {
+      if (item.id === itemId) {
+        const newQuantity = item.quantity + change;
+        return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
+      }
+      return item;
+    }).filter(item => item.quantity > 0));
+  };
+
+  const removeItem = (itemId) => {
+    setCartItems(cartItems.filter(item => item.id !== itemId));
+  };
+
+  const handleCheckout = () => {
+    navigate('/checkout', { state: { cartItems } });
   };
 
   const handleSeeAllClick = (sectionKey) => {
@@ -220,7 +252,11 @@ const Marketplace = () => {
         <p className="text-xs text-gray-600 mb-4 leading-tight">{product.title}</p>
         <div className="flex justify-between items-center text-gray-700 text-sm">
           <button 
-            onClick={() => toggleWishlist(product.id)}
+            onClick={(e) => {
+              e.stopPropagation(); // ✅ stops link navigation
+              e.preventDefault();
+              toggleWishlist(product.id);
+            }}
             className="hover:text-gray-900 transition-colors"
             aria-label="Add to wishlist"
           >
@@ -230,16 +266,21 @@ const Marketplace = () => {
             />
           </button>
           <button 
-            onClick={addToCart}
+            onClick={(e) => {
+              e.stopPropagation(); // ✅ stops link navigation
+              e.preventDefault();
+              // addToCart(product);
+              handleAddToCart(product)
+            }}
             className="flex items-center space-x-1 border border-gray-300 rounded px-3 py-1 text-xs hover:bg-gray-100 transition-colors"
           >
-            <ShoppingCart size={12} />
             <span>Add to Cart</span>
           </button>
         </div>
       </div>
     </article>
   );
+
 
   const ProductSection = ({ title, products, sectionKey }) => (
     <section className="mb-12">
@@ -256,10 +297,27 @@ const Marketplace = () => {
           />
         </button>
       </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {products.map(product => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+        {products.map(product => {
+          const routePath =
+            product.type === "Rent"
+              ? `/productdetail-rent/${product.id}`
+              : product.type === "Auction"
+              ? `/productdetail-auction/${product.id}`
+              : `/productdetail-buy/${product.id}`;
+
+          return (
+            <Link
+              key={product.id}
+              to={routePath}
+              state={{ product }}
+              className="block"
+            >
+              <ProductCard product={product} />
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -300,12 +358,11 @@ const Marketplace = () => {
 
   return (
     <div className="bg-white text-gray-900 min-h-screen" style={{ fontFamily: 'system-ui, sans-serif' }}>
+      <Navbar onCartClick={() => setIsCartOpen(true)} />
       
-        <Navbar cartItems={cartItems} />
       <main className="max-w-[100rem] mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <h1 className="text-4xl font-normal mb-8">Latest Products</h1>
         
-        {/* Filters */}
         <div className="flex justify-end space-x-6 mb-8">
           <FilterDropdown
             label="Category"
@@ -344,19 +401,25 @@ const Marketplace = () => {
           />
         </div>
 
-        {/* Product Sections */}
         <ProductSection title="Weddings" products={products.weddings} sectionKey="weddings" />
         <ProductSection title="Luxury" products={products.luxury} sectionKey="luxury" />
         <ProductSection title="Ready-to-wear" products={products.readyToWear} sectionKey="readyToWear" />
         <ProductSection title="Bespoke & tailored" products={products.bespoke} sectionKey="bespoke" />
         <ProductSection title="Thrift & pre-loved" products={products.thrift} sectionKey="thrift" />
 
-        {/* Footer */}
         <footer className="max-w-10xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 pb-10 pt-10">
-            <MarketFooter />
+          <MarketFooter />
         </footer>
-        
       </main>
+
+      <CartModal 
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cartItems}
+        updateQuantity={updateQuantity}
+        removeItem={removeItem}
+        onCheckout={handleCheckout}
+      />
     </div>
   );
 };

@@ -16,7 +16,6 @@ import {
   X
 } from 'lucide-react';
 
-import DashHeader from "./DashHeader.jsx"
 import DashboardCards from './DashboardCard.jsx';
 
 const Dashboard = () => {
@@ -100,6 +99,9 @@ const Dashboard = () => {
     }
   ];
 
+
+  
+
   const recentOrders = [
     { id: '#1045', customer: 'Fiyinfolu Idamiebi', item: 'Leather bag', date: 'Aug 23, 2025', amount: '₦45,000' },
     { id: '#1046', customer: 'Amarachi Anigbogu', item: 'Denim jacket', date: 'Aug 23, 2025', amount: '₦32,000' },
@@ -111,70 +113,12 @@ const Dashboard = () => {
     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
   );
 
+
   return (
     <div className="bg-[#F3F5F7] min-h-screen flex relative">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       {/* Sidebar */}
-      <aside className={`
-        bg-white w-64 min-h-screen flex flex-col px-6 py-8 border-r border-gray-200
-        fixed lg:relative lg:translate-x-0 z-30 transition-transform duration-300 ease-in-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center space-x-2">
-            {/* Logo */}
-            <div className="flex items-center space-x-2 text-white text-sm font-normal">
-                 <img 
-                alt="Feather icon in green" 
-                className="" 
-                height="" 
-                src="https://res.cloudinary.com/drgk8rmny/image/upload/v1753051987/Frame_1000011702_5_2_iucm5i.svg" 
-                width=""
-              />
-            </div>
-          </div>
-          <button 
-            className="lg:hidden text-gray-500 hover:text-gray-700"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        <nav className="flex flex-col space-y-2 text-gray-900 text-sm font-normal">
-          {menuItems.map((item, index) => {
-            const Icon = item.icon;
-            return (
-              <a
-                key={index}
-                className={`flex items-center space-x-3 rounded-lg px-4 py-3 transition-colors ${
-                  item.active 
-                    ? 'bg-[#E6F0EF] text-[#00403F]' 
-                    : 'hover:bg-gray-100 hover:text-[#00403F]'
-                }`}
-                href="#"
-              >
-                <Icon className="w-5 h-5" />
-                <span>{item.label}</span>
-              </a>
-            );
-          })}
-        </nav>
-      </aside>
-
       {/* Main content */}
       <main className="flex-1 p-4 lg:p-6 xl:p-10 space-y-6 lg:space-y-8">
-        {/* Top bar */}
-       
-        <DashHeader />
-       
 
         {/* Dashboard header */}
         <section className="space-y-1">

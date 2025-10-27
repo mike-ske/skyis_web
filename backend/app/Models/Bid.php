@@ -17,6 +17,10 @@ class Bid extends Model
         'status',
     ];
 
+    protected $casts = [
+        'meta' => 'array',
+        'amount' => 'decimal:2',
+    ];
     // Relationships
     public function auction()
     {

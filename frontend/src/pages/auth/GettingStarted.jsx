@@ -49,7 +49,7 @@ export default function SkyisOnboarding() {
         {/* Left Image Section */}
         <div className="hidden sm:flex flex-shrink-0 w-full md:max-w-lg lg:max-w-2xl rounded-3xl overflow-hidden relative">
             <img
-                src="https://res.cloudinary.com/drgk8rmny/image/upload/v1756222176/Frame_1686553286_qxegrh.png"
+                src="https://res.cloudinary.com/drgk8rmny/image/upload/v1757673009/Frame_1686553287_zcujpi.png"
                 alt="Person holding a green umbrella with a black bag hanging on their shoulder, standing near a black metal fence"
                 className="w-full h-auto object-cover rounded-3xl"
             />
