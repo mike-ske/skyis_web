@@ -18,7 +18,7 @@ import AboutUsComp from '../navigation/aboutUsComp';
 import HowItWorksSection from '../navigation/howItWorks';
 import CommunityShowcaseSection from '../navigation/CommunityShowcaseSection';
 import TestimonialsSection from '../navigation/Testimonials';
-import FAQSection from '../navigation/faq';
+import FAQSection from '../navigation/Faq';
 import ContactUsSection from '../navigation/Contact';
 import LandingFooter from '../navigation/LandingFooter';
 import HeroSection from '../navigation/HeroSection';
