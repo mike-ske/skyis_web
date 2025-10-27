@@ -73,7 +73,7 @@ import Bespoke from './pages/auth/shop/main-pages/Bestspoke';
 import Thrift from './pages/auth/shop/main-pages/Thrift';
 
 // Wedding Pages
-import BridalDress from './pages/auth/shop/wedding-pages/BridalDress';
+import BridalDress from './pages/auth/shop/wedding-pages/Bridaldress';
 import BridalShoes from './pages/auth/shop/wedding-pages/BridalShoes';
 import Groomsmen from './pages/auth/shop/wedding-pages/Groomsmen';
 import BridalAccessories from './pages/auth/shop/wedding-pages/BridalAccessories';
