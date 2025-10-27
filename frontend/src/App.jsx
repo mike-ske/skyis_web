@@ -73,7 +73,7 @@ import Bespoke from './pages/auth/shop/main-pages/Bestspoke';
 import Thrift from './pages/auth/shop/main-pages/Thrift';
 
 // Wedding Pages
-import BridalDress from './pages/auth/shop/wedding-pages/Bridaldress';
+import Bridaldress from './pages/auth/shop/wedding-pages/Bridaldress';
 import BridalShoes from './pages/auth/shop/wedding-pages/BridalShoes';
 import Groomsmen from './pages/auth/shop/wedding-pages/Groomsmen';
 import BridalAccessories from './pages/auth/shop/wedding-pages/BridalAccessories';
@@ -193,7 +193,7 @@ function App() {
                   <Route path="/thrift" element={<Thrift />} />
 
                   {/* Wedding Pages */}
-                  <Route path="/bridal-dress" element={<BridalDress />} />
+                  <Route path="/bridal-dress" element={<Bridaldress />} />
                   <Route path="/bridal-shoes" element={<BridalShoes />} />
                   <Route path="/groomsmen" element={<Groomsmen />} />
                   <Route path="/bridal-accessories" element={<BridalAccessories />} />
