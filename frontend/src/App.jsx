@@ -74,7 +74,7 @@ import Thrift from './pages/auth/shop/main-pages/Thrift';
 
 // Wedding Pages
 import Bridaldress from './pages/auth/shop/wedding-pages/Bridaldress';
-import BridalShoes from './pages/auth/shop/wedding-pages/BridalShoes';
+import Bridalshoes from './pages/auth/shop/wedding-pages/Bridalshoes';
 import Groomsmen from './pages/auth/shop/wedding-pages/Groomsmen';
 import BridalAccessories from './pages/auth/shop/wedding-pages/BridalAccessories';
 
@@ -181,7 +181,7 @@ function App() {
                   <Route path="/marketplace" element={<Marketplace />} />
                   <Route path="/wedding" element={<Wedding />} />
                   {/* <Route path="/bridaldress" element={<BridalDress />} />
-                  <Route path="/bridalshoes" element={<BridalShoes />} />
+                  <Route path="/Bridalshoes" element={<Bridalshoes />} />
                   <Route path="/bridalaccessories" element={<BridalAccessories />} /> */}
                   <Route path="/buygroomswear" element={<BuyGroomsWear />} />
                   <Route path="/ready-to-wear" element={<ReadyToWear />} />
@@ -194,7 +194,7 @@ function App() {
 
                   {/* Wedding Pages */}
                   <Route path="/bridal-dress" element={<Bridaldress />} />
-                  <Route path="/bridal-shoes" element={<BridalShoes />} />
+                  <Route path="/bridal-shoes" element={<Bridalshoes />} />
                   <Route path="/groomsmen" element={<Groomsmen />} />
                   <Route path="/bridal-accessories" element={<BridalAccessories />} />
 
